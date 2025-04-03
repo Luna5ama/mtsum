@@ -60,6 +60,7 @@ TotalSeconds      : 138.0812053
 4.4x faster than `sha256sum` on a ~165 GiB file.
 
 #### Environment
+* OS: Debian GNU/Linux trixie/sid
 * CPU: [AMD EPYC 7203P](https://www.amd.com/en/products/processors/server/epyc/7003-series/amd-epyc-7203p.html)
 * RAM: 512GB DDR4
 * SSD: [Micron 7450 Pro 7.68TB U.3 Enterprise SSD](https://www.crucial.com/ssd/7450_pro/mtfdkcc7t6tfr-1bc1zabyyr) (Max Seq. Read: 6,800 MB/s)
