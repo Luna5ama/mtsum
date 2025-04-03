@@ -51,46 +51,51 @@ void readBytesFromFileLLFIO(const std::string& filePath, size_t readOffset, uint
     }
 }
 
-MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size) {
+MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size);
+
+MTNode computeLeafHash(Scope& scope, size_t offset, size_t size) {
+    MTNode node(scope.tree);
+    int bufferIndex = scope.bufferPool.alloc();
+    auto& buffer = scope.bufferPool.buffers[bufferIndex];
+    readBytesFromFileLLFIO(scope.filePath, offset, buffer.data());
+    node.hashFromData({buffer.data(), size});
+    scope.bufferPool.free(bufferIndex);
+    return node;
+}
+
+tf::Task makeChildNode(tf::Subflow& sbf, Scope& scope, std::unique_ptr<MTNode>& child, size_t offset, size_t size) {
     if (size <= MT_BLOCK_SIZE) {
-        MTNode node(scope.tree);
-        auto readAndHash = sbf.emplace(
-            [&node, &scope, offset, size]() {
-                int bufferIndex = scope.bufferPool.alloc();
-                auto& buffer = scope.bufferPool.buffers[bufferIndex];
-                readBytesFromFileLLFIO(scope.filePath, offset, buffer.data());
-                node.hashFromData({buffer.data(), size});
-                scope.bufferPool.free(bufferIndex);
+        return sbf.emplace(
+                [&scope, &child, offset, size](tf::Subflow& sbf) {
+                    child = std::make_unique<MTNode>(computeLeafHash(scope, offset, size));
+                }
+            )
+            .acquire(scope.semaphore)
+            .release(scope.semaphore)
+            .name(std::to_string(offset) + ", " + std::to_string(size));
+    } else {
+        return sbf.emplace(
+            [&scope, &child, offset, size](tf::Subflow& sbf) {
+                child = std::make_unique<MTNode>(build_tree(sbf, scope, offset, size));
             }
-        );
-
-        readAndHash.acquire(scope.semaphore);
-        readAndHash.release(scope.semaphore);
-        sbf.join();
-
-        return node;
+        ).name(std::to_string(offset) + ", " + std::to_string(size));
     }
+}
 
+MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size) {
     auto leftOffset = offset;
     auto leftSize = previousPowerOfTwo(size - 1);
     auto rightOffset = offset + leftSize;
     auto rightSize = size - leftSize;
 
     MTNode node(scope.tree);
-    sbf.emplace(
-        [&node, &scope, leftOffset, leftSize](tf::Subflow& sbf) {
-            node.left = std::make_unique<MTNode>(build_tree(sbf, scope, leftOffset, leftSize));
-        }
-    ).name(std::to_string(leftOffset) + ", " + std::to_string(leftSize));
 
-    sbf.emplace(
-        [&node, &scope, rightOffset, rightSize](tf::Subflow& sbf) {
-            node.right = std::make_unique<MTNode>(build_tree(sbf, scope, rightOffset, rightSize));
-        }
-    ).name(std::to_string(rightOffset) + ", " + std::to_string(rightSize));
+    auto leftTask = makeChildNode(sbf, scope, node.left, leftOffset, leftSize);
+    auto rightTask = makeChildNode(sbf, scope, node.right, rightOffset, rightSize);
 
     sbf.join();
-
+    leftTask.name(node.left->hashString());
+    rightTask.name(node.right->hashString());
     node.hashFromChildren();
 
     return node;
@@ -111,6 +116,10 @@ int main(int argc, char* argv[]) {
         .metavar("algorithm")
         .choices("md5", "sha1", "sha256", "sha384", "sha512")
         .default_value("sha256");
+
+    program.add_argument("-g")
+        .help("output the merkle tree as DOT graph")
+        .flag();
 
     program.add_argument("path")
         .help("path to input file")
@@ -138,6 +147,7 @@ int main(int argc, char* argv[]) {
     auto filePath = program.get<std::string>("path");
     auto verbose = program.get<bool>("-v");
     auto benchmark = program.get<bool>("-b");
+    auto graphOutput = program.get<bool>("-g");
 
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
 
@@ -184,24 +194,26 @@ int main(int argc, char* argv[]) {
             scope.tree.root = std::make_unique<MTNode>(build_tree(sbf, scope, 0, fileSize));
         }
     );
+    allocTask.name("setup");
+    rootTask.name("root");
     allocTask.precede(rootTask);
     executor.run(taskflow).wait();
+    rootTask.name(tree.root->hashString());
 
     auto t1 = std::chrono::system_clock::now();
     auto elapsed_par = std::chrono::duration<double>(t1 - t0);
 
-    for (int i = 0; i < tree.hashSize; i++) {
-        std::cout << std::hex << (int) tree.root->hash[i];
+    if (graphOutput) {
+        taskflow.dump(std::cout);
+    } else {
+        std::cout << rootTask.name() << std::endl;
     }
-    std::cout << std::endl;
 
     if (verbose || benchmark) {
         std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
         double gbPerSecond = (static_cast<double>(fileSize) / 1e9) / static_cast<double>(elapsed_par.count());
         std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
     }
-
-//    taskflow.dump(std::cout);
 
     return 0;
 }

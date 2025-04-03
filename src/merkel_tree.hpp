@@ -31,8 +31,8 @@ struct MTNode {
 
     bool hashFromChildren();
     bool hashFromData(std::span<const uint8_t> inputData);
+    std::string hashString() const;
 };
-
 
 struct MTTree {
     const EVP_MD* hashType;
@@ -72,4 +72,17 @@ bool MTNode::hashFromChildren() {
     std::copy(left->hash.begin(), left->hash.end(), concatHash.begin());
     std::copy(right->hash.begin(), right->hash.end(), concatHash.begin() + tree.hashSize);
     return hashFromData(concatHash);
+}
+
+std::stringstream& operator<<(std::stringstream& ss, const MTNode& node) {
+    for (int i = 0; i < node.tree.hashSize; i++) {
+        ss << std::hex << (int) node.hash[i];
+    }
+    return ss;
+}
+
+std::string MTNode::hashString() const {
+    std::stringstream ss;
+    ss << *this;
+    return ss.str();
 }
