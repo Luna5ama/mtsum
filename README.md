@@ -10,9 +10,7 @@ enabling efficient checksum calculations for large files in a reasonable time.
 
 
 ## Usage
-`mtsum <p> <path>`
-* `<p>` - The number of processors to use for the checksum calculation.
-* `<path>` - The path to the file to calculate the checksum for.
+`Usage: mtsum [--help] [--version] [-p processors] [-a algorithm] path`
 
 ## Building
 ### Prerequisites

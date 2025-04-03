@@ -2,9 +2,12 @@
 #include <fstream>
 #include <vector>
 #include <chrono>
+#include <argparse/argparse.hpp>
 #include <taskflow/taskflow.hpp>
 #include <taskflow/algorithm/for_each.hpp>
 #include <llfio.hpp>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
 #include "merkel_tree.hpp"
 
 struct Scope {
@@ -93,15 +96,49 @@ MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size) {
     return node;
 }
 
-
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        std::cout << "usage: " << argv[0] << " p path" << std::endl;
-        return -1;
+    argparse::ArgumentParser program("mtsum", "1.0.0");
+    program.set_usage_max_line_width(200);
+
+    program.add_argument("-p")
+        .help("number of processors to use, default is 8")
+        .metavar("processors")
+        .default_value(8)
+        .scan<'i', int>();
+
+    program.add_argument("-a")
+        .help("algorithm to use, default is sha256")
+        .metavar("algorithm")
+        .choices("md5", "sha1", "sha256", "sha384", "sha512")
+        .default_value("sha256");
+
+    program.add_argument("path")
+        .help("path to input file")
+        .required();
+
+    program.add_group("Misc options");
+    program.add_argument("-b")
+        .help("enable benchmark")
+        .flag();
+
+    program.add_argument("-v")
+        .help("enable verbose output")
+        .flag();
+
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << program;
+        return 1;
     }
 
-    int32_t p = std::stoi(argv[1]);
-    std::string filePath = argv[2];
+    auto p = program.get<int>("-p");
+    auto algorithmName = program.get<std::string>("-a");
+    auto filePath = program.get<std::string>("path");
+    auto verbose = program.get<bool>("-v");
+    auto benchmark = program.get<bool>("-b");
+
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
 
     if (!file) {
@@ -109,12 +146,28 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int64_t fileSize = file.tellg();
+    if (p < 1) {
+        std::cerr << "Number of processors must be at least 1" << std::endl;
+        return 1;
+    }
 
-    #ifdef BENCHMARK
+    auto algorithm = EVP_get_digestbyname(algorithmName.c_str());
+
+    if (!algorithm) {
+        std::cerr << "Invalid algorithm: " << algorithmName << std::endl;
+        return 1;
+    }
+
+    size_t fileSize = file.tellg();
+
+    if (verbose) {
+        std::cout << "Algorithm: " << algorithmName << std::endl;
+        std::cout << "Number of processors: " << p << std::endl;
+        std::cout << "File size: " << fileSize << " bytes" << std::endl;
+    }
+
     auto t0 = std::chrono::system_clock::now();
-    #endif
-    MTTree tree(EVP_sha256());
+    MTTree tree(algorithm);
 
     tf::Executor executor(p);
     tf::Taskflow taskflow("merkel_tree");
@@ -134,21 +187,19 @@ int main(int argc, char* argv[]) {
     allocTask.precede(rootTask);
     executor.run(taskflow).wait();
 
-    #ifdef BENCHMARK
     auto t1 = std::chrono::system_clock::now();
     auto elapsed_par = std::chrono::duration<double>(t1 - t0);
-    #endif
 
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < tree.hashSize; i++) {
         std::cout << std::hex << (int) tree.root->hash[i];
     }
     std::cout << std::endl;
 
-    #ifdef BENCHMARK
-    std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
-    double gbPerSecond = (static_cast<double>(fileSize) / 1e9) / static_cast<double>(elapsed_par.count());
-    std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
-    #endif
+    if (verbose || benchmark) {
+        std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
+        double gbPerSecond = (static_cast<double>(fileSize) / 1e9) / static_cast<double>(elapsed_par.count());
+        std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
+    }
 
 //    taskflow.dump(std::cout);
 

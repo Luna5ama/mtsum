@@ -2,6 +2,7 @@
   "dependencies": [
     "llfio",
     "taskflow",
-    "openssl"
+    "openssl",
+    "argparse"
   ]
 }
