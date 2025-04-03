@@ -8,7 +8,6 @@ With the latest PCIe 4.0 and 5.0 SSDs, a single processor thread is insufficient
 This utility leverages multiple threads to compute a file’s checksum in parallel using a Merkle tree structure, 
 enabling efficient checksum calculations for large files in a reasonable time.
 
-
 ## Usage
 `Usage: mtsum [--help] [--version] [-p processors] [-a algorithm] path`
 ```
@@ -30,7 +29,7 @@ Misc options (detailed usage):
 ## Building
 ### Prerequisites
 1. CMake 3.20 or higher
-2. vcpkg
+2. [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started)
 3. make or ninja
 4. Any C++ compiler that supports C++20 or higher
 
