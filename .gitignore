@@ -4,3 +4,6 @@ cmake-*/
 
 .idea/
 .vscode/
+
+vcpkg_installed/
+build/
