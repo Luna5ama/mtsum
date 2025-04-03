@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     program.set_usage_max_line_width(200);
 
     program.add_argument("-p")
-        .help("number of processors to use, default is 8")
+        .help("number of processors to use")
         .metavar("processors")
         .default_value(8)
         .scan<'i', int>();

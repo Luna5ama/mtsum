@@ -17,8 +17,8 @@ Positional arguments:
 Optional arguments:
   -h, --help     shows help message and exits
   --version      prints version information and exits
-  -p             number of processors to use, default is 8 [nargs=0..1] [default: 8]
-  -a             hashing algorithm to use [nargs=0..1] [default: "sha256"]
+  -p             number of processors to use [default: 8]
+  -a             hashing algorithm to use, supported algorithms are md5, sha1, sha256, sha384, sha512 [default: "sha256"]
   -g             output the merkle tree as DOT graph
   
 Misc options (detailed usage):
