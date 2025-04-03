@@ -23,7 +23,36 @@ Optional arguments:
   
 Misc options (detailed usage):
   -b             enable benchmark
--  v             enable verbose output
+  -v             enable verbose output
+```
+
+## Performance
+### Windows
+~4.2x faster than `Get-FileHash` on a ~183 GiB file.
+
+#### Environment
+* OS: Windows 11 Pro 24H2
+* CPU: [Intel i9-13900KF](https://www.intel.com/content/www/us/en/products/sku/230497/intel-core-i913900kf-processor-36m-cache-up-to-5-80-ghz/specifications.html)
+* RAM: 64GB Dual-Channel DDR4-3200
+* SSD: [WD Black SN850X 4TB PCIe 4.0](https://shop.sandisk.com/products/ssd/internal-ssd/wd-black-sn850x-nvme-ssd?sku=WDS400T2X0E-00BCA0) (Max Seq. Read: 7,300 MB/s)
+#### mtsum
+```
+PS > Measure-Command { mtsum -v ... | Out-Default }
+Algorithm: sha256
+Number of processors: 8
+File size: 196502093824 bytes
+c5750c570206464ed6d9b2ef8d290a42fcb8121f97a803c6510ecca5b43ee699
+32.99 s (5.96 GB/s)
+
+...
+TotalSeconds      : 33.1166517
+...
+```
+#### Reference
+```
+PS > Measure-Command { Get-FileHash ... | Out-Default }
+...
+TotalSeconds      : 138.0812053
 ```
 
 ## Building
