@@ -102,7 +102,7 @@ MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size) {
 }
 
 int main(int argc, char* argv[]) {
-    argparse::ArgumentParser program("mtsum", "1.0.0");
+    argparse::ArgumentParser program("mtsum", "1.0.2");
     program.set_usage_max_line_width(200);
 
     program.add_argument("-p")
@@ -112,10 +112,10 @@ int main(int argc, char* argv[]) {
         .scan<'i', int>();
 
     program.add_argument("-a")
-        .help("algorithm to use, default is sha256")
+        .help("hashing algorithm to use, supported algorithms are md5, sha1, sha256, sha384, sha512")
         .metavar("algorithm")
-        .choices("md5", "sha1", "sha256", "sha384", "sha512")
-        .default_value("sha256");
+        .default_value(std::string {"sha256"})
+        .choices("md5", "sha1", "sha256", "sha384", "sha512");
 
     program.add_argument("-g")
         .help("output the merkle tree as DOT graph")

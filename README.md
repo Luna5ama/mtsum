@@ -11,6 +11,21 @@ enabling efficient checksum calculations for large files in a reasonable time.
 
 ## Usage
 `Usage: mtsum [--help] [--version] [-p processors] [-a algorithm] path`
+```
+Positional arguments:
+  path           path to input file [required]
+
+Optional arguments:
+  -h, --help     shows help message and exits
+  --version      prints version information and exits
+  -p             number of processors to use, default is 8 [nargs=0..1] [default: 8]
+  -a             hashing algorithm to use [nargs=0..1] [default: "sha256"]
+  -g             output the merkle tree as DOT graph
+  
+Misc options (detailed usage):
+  -b             enable benchmark
+-  v             enable verbose output
+```
 
 ## Building
 ### Prerequisites
