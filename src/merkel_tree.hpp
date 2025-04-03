@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <openssl/evp.h>
+#include <iomanip>
 #include "buffer.hpp"
 
 // OpenSSL engine implementation
@@ -76,7 +77,7 @@ bool MTNode::hashFromChildren() {
 
 std::stringstream& operator<<(std::stringstream& ss, const MTNode& node) {
     for (int i = 0; i < node.tree.hashSize; i++) {
-        ss << std::hex << (int) node.hash[i];
+        ss << std::hex << std::setfill('0') << std::setw(2) << (int) node.hash[i];
     }
     return ss;
 }
