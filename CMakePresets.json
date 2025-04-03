@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "configurePresets": [
+        {
+            "name": "release",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/cmake-build-release",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "debug",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/cmake-build-debug",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        }
+    ]
+}
