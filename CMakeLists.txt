@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-set(VCPKG_TARGET_TRIPLET x64-windows-static)
+set(VCPKG_LIBRARY_LINKAGE static)
 project(mtsum CXX)
 
 if (MSVC)
