@@ -18,6 +18,7 @@ endif ()
 
 set(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++")
 
+find_package(argparse CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(llfio CONFIG REQUIRED)
 find_package(Threads REQUIRED)
@@ -30,5 +31,5 @@ else ()
 endif ()
 
 add_executable(mtsum src/mtsum.cpp)
-target_link_libraries(mtsum PRIVATE Taskflow::Taskflow OpenSSL::Crypto ${LLFIO_LIB})
+target_link_libraries(mtsum PRIVATE argparse::argparse Taskflow::Taskflow OpenSSL::Crypto ${LLFIO_LIB})
 target_link_options(mtsum PRIVATE -static-libgcc -static-libstdc++)
