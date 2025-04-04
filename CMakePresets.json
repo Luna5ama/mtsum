@@ -32,9 +32,48 @@
             "name": "debug-make",
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/cmake-build-debug",
+            "cacheVariables": {                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release-ninja-static",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/cmake-build-release-static",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Release",
+                "MTSUM_STATIC":true
+            }
+        },
+        {
+            "name": "debug-ninja-static",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/cmake-build-debug-static",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MTSUM_STATIC": true
+            }
+        },
+        {
+            "name": "release-make-static",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/cmake-build-release-static",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Release",
+                "MTSUM_STATIC": true
+            }
+        },
+        {
+            "name": "debug-make-static",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/cmake-build-debug-static",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MTSUM_STATIC": true
             }
         }
     ]

@@ -104,8 +104,12 @@ Note: vcpkg will automatically download and install the dependencies for you.
 
 
 ### Instructions
+#### Dynamic Linking
 1. Run `cmake --preset=release-ninja` or `cmake --preset=release-make` to generate the build files.
-2. Run `cd cmake-build-release && make` or `cd cmake-build-release && ninja` in to build the project.
+2. Run `cd cmake-build-release && make` or `cd cmake-build-release && ninja`  in to build the project.
+#### Static Linking
+1. Run `cmake --preset=release-ninja-static` or `cmake --preset=release-make-static` to generate the build files.
+2. Run `cd cmake-build-release-static && make` or `cd cmake-build-release-static && ninja` in to build the project.
 
 
 ## Credits
