@@ -14,6 +14,7 @@ struct MTTree;
 struct MTNode;
 
 const int64_t MT_BLOCK_SIZE = 128 * 1024 * 1024;
+const int64_t MT_BLOCK_BALANCE_THRESHOLD = 1024 * 1024 * 1024;
 
 struct OpenSSLFree {
     void operator()(void* ptr) {

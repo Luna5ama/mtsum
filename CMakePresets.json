@@ -2,6 +2,46 @@
     "version": 2,
     "configurePresets": [
         {
+            "name": "release-ninja-mpi",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/cmake-build-release-mpi",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Release",
+                "MTSUM_MPI": true
+            }
+        },
+        {
+            "name": "debug-ninja-mpi",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/cmake-build-debug-mpi",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MTSUM_MPI": true
+            }
+        },
+        {
+            "name": "release-make-mpi",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/cmake-build-release-mpi",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Release",
+                "MTSUM_MPI": true
+            }
+        },
+        {
+            "name": "debug-make-mpi",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/cmake-build-debug-mpi",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MTSUM_MPI": true
+            }
+        },
+        {
             "name": "release-ninja",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/cmake-build-release",
@@ -32,7 +72,8 @@
             "name": "debug-make",
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/cmake-build-debug",
-            "cacheVariables": {                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_BUILD_TYPE": "Debug"
             }
         },
@@ -43,7 +84,7 @@
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_BUILD_TYPE": "Release",
-                "MTSUM_STATIC":true
+                "MTSUM_STATIC": true
             }
         },
         {
