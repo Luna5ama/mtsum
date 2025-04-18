@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 option(MTSUM_STATIC "Enable static linking" OFF)
 option(MTSUM_MPI "Enable MPI support" OFF)
+message("MTSUM_STATIC: ${MTSUM_STATIC}")
+message("MTSUM_MPI: ${MTSUM_MPI}")
 if (MTSUM_STATIC)
     set(VCPKG_LIBRARY_LINKAGE static)
     if (WIN32)
