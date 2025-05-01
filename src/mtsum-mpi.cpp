@@ -248,6 +248,7 @@ int main(int argc, char* argv[]) {
             int length;
             MPI_Error_string(ret, error_string, &length);
             std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+            MPI_File_close(&fh);
             MPI_Finalize();
             return 1;
         }
@@ -264,6 +265,7 @@ int main(int argc, char* argv[]) {
             int length;
             MPI_Error_string(ret, error_string, &length);
             std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+            MPI_File_close(&fh);
             MPI_Finalize();
             return 1;
         }
