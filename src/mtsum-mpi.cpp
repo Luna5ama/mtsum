@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto [offset, size] = static_cast<std::pair<ptrdiff_t, ptrdiff_t>>>(partitions[mpiRank]);
+    auto [offset, size] = static_cast<std::pair<ptrdiff_t, ptrdiff_t>>(partitions[mpiRank]);
     std::vector<uint8_t> buffer(size);
 
     MPI_Barrier(MPI_COMM_WORLD);
