@@ -241,7 +241,7 @@ int main(int argc, char* argv[]) {
 
     for (localOffset = 0; localOffset < minSize; localOffset += SIZE_GB) {
         // Collective read operation
-        ret = MPI_File_read_at_all(fh, localOffset, buffer.data(), SIZE_GB, MPI_BYTE, &status);
+        ret = MPI_File_read_all(fh, buffer.data(), SIZE_GB, MPI_BYTE, &status);
 
         if (ret != MPI_SUCCESS) {
             char error_string[MPI_MAX_ERROR_STRING];
@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
     for (; localOffset < size; localOffset += SIZE_GB) {
         // Collective read operation
         auto clampSize = std::min(size - localOffset, SIZE_GB);
-        ret = MPI_File_read_at(fh, localOffset, buffer.data(), clampSize, MPI_BYTE, &status);
+        ret = MPI_File_read(fh, buffer.data(), clampSize, MPI_BYTE, &status);
 
         if (ret != MPI_SUCCESS) {
             char error_string[MPI_MAX_ERROR_STRING];
