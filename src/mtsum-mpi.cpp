@@ -2,6 +2,11 @@
 #include <mpi.h>
 #include "mtsum.hpp"
 
+template <class Tp>
+inline void DoNotOptimize(Tp const& value) {
+    asm volatile("" : : "r,m"(value) : "memory");
+}
+
 void computeLocalTree(
     tf::Executor& executor,
     MTTree& localTree,
@@ -77,8 +82,24 @@ MTNode globalHash(
     auto leftIndex = index << 1;
     auto rightIndex = leftIndex + 1;
 
-    node.left = std::make_unique<MTNode>(globalHash(globalTree, localHashes, verbose, leftIndex, currLevelPartitionCount << 1, targetLevelPartitionCount));
-    node.right = std::make_unique<MTNode>(globalHash(globalTree, localHashes, verbose, rightIndex, currLevelPartitionCount << 1, targetLevelPartitionCount));
+    node.left = std::make_unique<MTNode>(
+        globalHash(
+            globalTree,
+            localHashes,
+            verbose,
+            leftIndex,
+            currLevelPartitionCount << 1,
+            targetLevelPartitionCount
+        ));
+    node.right = std::make_unique<MTNode>(
+        globalHash(
+            globalTree,
+            localHashes,
+            verbose,
+            rightIndex,
+            currLevelPartitionCount << 1,
+            targetLevelPartitionCount
+        ));
     node.hashFromChildren();
 
     return node;
@@ -181,46 +202,53 @@ int main(int argc, char* argv[]) {
         std::cout << "File size: " << fileSize << " bytes" << std::endl;
         std::cout << "Size per rank: " << partitions[0].second << " bytes" << std::endl;
         for (int i = 0; i < mpiSize; i++) {
-            std::cout << "Rank " << i << ": offset=" << partitions[i].first << ", size=" << partitions[i].second << std::endl;
+            std::cout << "Rank " << i << ": offset=" << partitions[i].first << ", size=" << partitions[i].second
+                      << std::endl;
         }
     }
+
+    auto [offset, size] = static_cast<std::pair<ptrdiff_t, ptrdiff_t>>>(partitions[mpiRank]);
+    std::vector<uint8_t> buffer(size);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto t0 = std::chrono::system_clock::now();
 
-    MTTree localTree(algorithm);
-    tf::Executor executor(p);
+    // Open the file with MPI I/O collectively
+    MPI_File fh;
+    MPI_Status status;
+    int ret = MPI_File_open(MPI_COMM_WORLD, filePath.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 
-    auto [offset, size] = partitions[mpiRank];
-    computeLocalTree(executor, localTree, filePath, p, offset, size);
-
-    if (mpiRank != 0) {
-        MPI_Gather(
-            localTree.root->hash.data(), localTree.hashSize, MPI_UINT8_T,
-            nullptr, localTree.hashSize, MPI_UINT8_T, 0, MPI_COMM_WORLD
-        );
-    } else {
-        std::vector<uint8_t> receiveBuffer(localTree.hashSize * mpiSize);
-        MPI_Gather(
-            localTree.root->hash.data(), localTree.hashSize, MPI_UINT8_T,
-            receiveBuffer.data(), localTree.hashSize, MPI_UINT8_T, 0, MPI_COMM_WORLD
-        );
-
-        MTTree globalTree(algorithm);
-        globalTree.root = std::make_unique<MTNode>(globalHash(globalTree, receiveBuffer, verbose, 0, 1, mpiSize));
-
-        std::cout << globalTree.root->hashString() << std::endl;
+    if (ret != MPI_SUCCESS) {
+        char error_string[MPI_MAX_ERROR_STRING];
+        int length;
+        MPI_Error_string(ret, error_string, &length);
+        std::cerr << "Rank " << mpiRank << " - Error opening file: "<< error_string << std::endl;
+        MPI_Finalize();
+        return 1;
     }
+
+    // Set the view for this process (optional for better performance)
+    MPI_File_set_view(fh, offset, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+
+    // Collective read operation
+    ret = MPI_File_read_all(fh, buffer.data(), size, MPI_BYTE, &status);
+
+    if (ret != MPI_SUCCESS) {
+        char error_string[MPI_MAX_ERROR_STRING];
+        int length;
+        MPI_Error_string(ret, error_string, &length);
+        std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+        MPI_Finalize();
+        return 1;
+    }
+
+    // Close the file
+    MPI_File_close(&fh);
+    DoNotOptimize(buffer);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto t1 = std::chrono::system_clock::now();
     auto elapsed_par = std::chrono::duration<double>(t1 - t0);
-
-//    if (graphOutput) {
-//        taskflow.dump(std::cout);
-//    } else {
-//        std::cout << rootTask.name() << std::endl;
-//    }
 
     if ((verbose || benchmark) && mpiRank == 0) {
         std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
