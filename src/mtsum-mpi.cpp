@@ -207,8 +207,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto [offset, size] = static_cast<std::pair<ptrdiff_t, ptrdiff_t>>(partitions[mpiRank]);
-    std::vector<uint8_t> buffer(size);
+    const size_t SIZE_GB = 1024 * 1024 * 1024;
+    auto [offset, size] = partitions[mpiRank];
+    auto minSize = size;
+    for (int i = 0; i < mpiSize; i++) {
+        minSize == std::min(minSize, partitions[i].second);
+    }
+    minSize = (minSize / SIZE_GB) * SIZE_GB;
+
+    std::vector<uint8_t> buffer(SIZE_GB);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto t0 = std::chrono::system_clock::now();
@@ -230,21 +237,41 @@ int main(int argc, char* argv[]) {
     // Set the view for this process (optional for better performance)
     MPI_File_set_view(fh, offset, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 
-    // Collective read operation
-    ret = MPI_File_read_all(fh, buffer.data(), size, MPI_BYTE, &status);
+    size_t localOffset;
 
-    if (ret != MPI_SUCCESS) {
-        char error_string[MPI_MAX_ERROR_STRING];
-        int length;
-        MPI_Error_string(ret, error_string, &length);
-        std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
-        MPI_Finalize();
-        return 1;
+    for (localOffset = 0; localOffset < minSize; localOffset += SIZE_GB) {
+        // Collective read operation
+        ret = MPI_File_read_at_all(fh, localOffset, buffer.data(), SIZE_GB, MPI_BYTE, &status);
+
+        if (ret != MPI_SUCCESS) {
+            char error_string[MPI_MAX_ERROR_STRING];
+            int length;
+            MPI_Error_string(ret, error_string, &length);
+            std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+            MPI_Finalize();
+            return 1;
+        }
+        DoNotOptimize(buffer);
+    }
+
+    for (; localOffset < size; localOffset += SIZE_GB) {
+        // Collective read operation
+        auto clampSize = std::min(size - localOffset, SIZE_GB);
+        ret = MPI_File_read_at_all(fh, localOffset, buffer.data(), clampSize, MPI_BYTE, &status);
+
+        if (ret != MPI_SUCCESS) {
+            char error_string[MPI_MAX_ERROR_STRING];
+            int length;
+            MPI_Error_string(ret, error_string, &length);
+            std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+            MPI_Finalize();
+            return 1;
+        }
+        DoNotOptimize(buffer);
     }
 
     // Close the file
     MPI_File_close(&fh);
-    DoNotOptimize(buffer);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto t1 = std::chrono::system_clock::now();
