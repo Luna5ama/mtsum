@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
     auto [offset, size] = partitions[mpiRank];
     auto minSize = size;
     for (int i = 0; i < mpiSize; i++) {
-        minSize == std::min(minSize, partitions[i].second);
+        minSize = std::min(minSize, partitions[i].second);
     }
     minSize = (minSize / SIZE_GB) * SIZE_GB;
 
