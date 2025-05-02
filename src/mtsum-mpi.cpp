@@ -185,7 +185,7 @@ int main(int argc, char* argv[]) {
 
     for (; localOffset < size; localOffset += MT_BLOCK_SIZE) {
         auto clampSize = std::min(size - localOffset, static_cast<size_t>(MT_BLOCK_SIZE));
-        ret = MPI_File_read_at(fh, static_cast<int64_t>(offset + localOffset), buffer.data(), static_cast<int64_t>(clampSize), MPI_BYTE, &status);
+        ret = MPI_File_read_at(fh, static_cast<int64_t>(offset + localOffset), buffer.data(), static_cast<int>(clampSize), MPI_BYTE, &status);
 
         if (ret != MPI_SUCCESS) {
             char error_string[MPI_MAX_ERROR_STRING];
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
 
     if ((verbose || benchmark) && mpiRank == 0) {
         std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
-        double gbPerSecond = (static_cast<double>(64 * MT_BLOCK_SIZE * mpiSize) / 1e9) / static_cast<double>(elapsed_par.count());
+        double gbPerSecond = (static_cast<double>(fileSize) / 1e9) / static_cast<double>(elapsed_par.count());
         std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
     }
 
