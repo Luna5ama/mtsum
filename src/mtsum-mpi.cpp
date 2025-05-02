@@ -165,11 +165,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Set the view for this process (optional for better performance)
-    MPI_File_set_view(fh, offset, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+    MPI_File_set_view(fh, static_cast<int64_t>(offset), MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 
     size_t localOffset;
 
-    for (localOffset = 0; localOffset < minSize; localOffset += SIZE_GB) {
+    for (int ii = 0; ii < 16; ii++) {
         // Collective read operation
         ret = MPI_File_read_all(fh, buffer.data(), SIZE_GB, MPI_BYTE, &status);
 
@@ -185,22 +185,22 @@ int main(int argc, char* argv[]) {
         DoNotOptimize(buffer);
     }
 
-    for (; localOffset < size; localOffset += SIZE_GB) {
-        // Collective read operation
-        auto clampSize = std::min(size - localOffset, SIZE_GB);
-        ret = MPI_File_read(fh, buffer.data(), clampSize, MPI_BYTE, &status);
-
-        if (ret != MPI_SUCCESS) {
-            char error_string[MPI_MAX_ERROR_STRING];
-            int length;
-            MPI_Error_string(ret, error_string, &length);
-            std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
-            MPI_File_close(&fh);
-            MPI_Finalize();
-            return 1;
-        }
-        DoNotOptimize(buffer);
-    }
+//    for (; localOffset < size; localOffset += SIZE_GB) {
+//        // Collective read operation
+//        auto clampSize = std::min(size - localOffset, SIZE_GB);
+//        ret = MPI_File_read(fh, buffer.data(), clampSize, MPI_BYTE, &status);
+//
+//        if (ret != MPI_SUCCESS) {
+//            char error_string[MPI_MAX_ERROR_STRING];
+//            int length;
+//            MPI_Error_string(ret, error_string, &length);
+//            std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+//            MPI_File_close(&fh);
+//            MPI_Finalize();
+//            return 1;
+//        }
+//        DoNotOptimize(buffer);
+//    }
 
     // Close the file
     MPI_File_close(&fh);
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     if ((verbose || benchmark) && mpiRank == 0) {
         std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
-        double gbPerSecond = (static_cast<double>(fileSize) / 1e9) / static_cast<double>(elapsed_par.count());
+        double gbPerSecond = (static_cast<double>(16 * SIZE_GB * mpiSize) / 1e9) / static_cast<double>(elapsed_par.count());
         std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
     }
 
