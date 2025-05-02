@@ -137,13 +137,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    const size_t SIZE_GB = 1024 * 1024 * 1024;
     auto [offset, size] = partitions[mpiRank];
     auto minSize = size;
     for (int i = 0; i < mpiSize; i++) {
         minSize = std::min(minSize, partitions[i].second);
     }
-    minSize = (minSize / SIZE_GB) * SIZE_GB;
+    minSize = (minSize / MT_BLOCK_SIZE) * MT_BLOCK_SIZE;
 
     std::vector<uint8_t> buffer(MT_BLOCK_SIZE);
 
@@ -164,12 +163,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Set the view for this process (optional for better performance)
-//    MPI_File_set_view(fh, static_cast<int64_t>(offset), MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+    size_t localOffset = 0;
 
-    for (int ii = 0; ii < 64; ii++) {
+    for (;localOffset < minSize; localOffset += MT_BLOCK_SIZE) {
         // Collective read operation
-        ret = MPI_File_read_at_all(fh, offset, buffer.data(), MT_BLOCK_SIZE, MPI_BYTE, &status);
+        ret = MPI_File_read_at_all(fh, static_cast<int64_t>(offset + localOffset), buffer.data(), MT_BLOCK_SIZE, MPI_BYTE, &status);
 
         if (ret != MPI_SUCCESS) {
             char error_string[MPI_MAX_ERROR_STRING];
@@ -181,26 +179,25 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        offset += MT_BLOCK_SIZE;
+        localOffset += MT_BLOCK_SIZE;
         DoNotOptimize(buffer);
     }
 
-//    for (; localOffset < size; localOffset += SIZE_GB) {
-//        // Collective read operation
-//        auto clampSize = std::min(size - localOffset, SIZE_GB);
-//        ret = MPI_File_read(fh, buffer.data(), clampSize, MPI_BYTE, &status);
-//
-//        if (ret != MPI_SUCCESS) {
-//            char error_string[MPI_MAX_ERROR_STRING];
-//            int length;
-//            MPI_Error_string(ret, error_string, &length);
-//            std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
-//            MPI_File_close(&fh);
-//            MPI_Finalize();
-//            return 1;
-//        }
-//        DoNotOptimize(buffer);
-//    }
+    for (; localOffset < size; localOffset += MT_BLOCK_SIZE) {
+        auto clampSize = std::min(size - localOffset, static_cast<size_t>(MT_BLOCK_SIZE));
+        ret = MPI_File_read_at(fh, static_cast<int64_t>(offset + localOffset), buffer.data(), static_cast<int64_t>(clampSize), MPI_BYTE, &status);
+
+        if (ret != MPI_SUCCESS) {
+            char error_string[MPI_MAX_ERROR_STRING];
+            int length;
+            MPI_Error_string(ret, error_string, &length);
+            std::cerr << "Rank " << mpiRank << " - Error reading file: " << error_string << std::endl;
+            MPI_File_close(&fh);
+            MPI_Finalize();
+            return 1;
+        }
+        DoNotOptimize(buffer);
+    }
 
     // Close the file
     MPI_File_close(&fh);
