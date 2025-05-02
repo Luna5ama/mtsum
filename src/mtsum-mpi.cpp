@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     if ((verbose || benchmark) && mpiRank == 0) {
         std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
-        double gbPerSecond = (static_cast<double>(64 * SIZE_GB * mpiSize) / 1e9) / static_cast<double>(elapsed_par.count());
+        double gbPerSecond = (static_cast<double>(64 * MT_BLOCK_SIZE * mpiSize) / 1e9) / static_cast<double>(elapsed_par.count());
         std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
     }
 
