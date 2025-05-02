@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
     }
     minSize = (minSize / SIZE_GB) * SIZE_GB;
 
-    std::vector<uint8_t> buffer(SIZE_GB);
+    std::vector<uint8_t> buffer(MT_BLOCK_SIZE);
 
     MPI_Barrier(MPI_COMM_WORLD);
     auto t0 = std::chrono::system_clock::now();
@@ -165,13 +165,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Set the view for this process (optional for better performance)
-    MPI_File_set_view(fh, static_cast<int64_t>(offset), MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+//    MPI_File_set_view(fh, static_cast<int64_t>(offset), MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 
-    size_t localOffset;
-
-    for (int ii = 0; ii < 16; ii++) {
+    for (int ii = 0; ii < 64; ii++) {
         // Collective read operation
-        ret = MPI_File_read_all(fh, buffer.data(), SIZE_GB, MPI_BYTE, &status);
+        ret = MPI_File_read_at_all(fh, offset, buffer.data(), MT_BLOCK_SIZE, MPI_BYTE, &status);
 
         if (ret != MPI_SUCCESS) {
             char error_string[MPI_MAX_ERROR_STRING];
@@ -182,6 +180,8 @@ int main(int argc, char* argv[]) {
             MPI_Finalize();
             return 1;
         }
+
+        offset += MT_BLOCK_SIZE;
         DoNotOptimize(buffer);
     }
 
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     if ((verbose || benchmark) && mpiRank == 0) {
         std::cout << std::fixed << std::setprecision(2) << elapsed_par.count() << " s (";
-        double gbPerSecond = (static_cast<double>(16 * SIZE_GB * mpiSize) / 1e9) / static_cast<double>(elapsed_par.count());
+        double gbPerSecond = (static_cast<double>(64 * SIZE_GB * mpiSize) / 1e9) / static_cast<double>(elapsed_par.count());
         std::cout << std::fixed << std::setprecision(2) << gbPerSecond << " GB/s)" << std::endl;
     }
 
