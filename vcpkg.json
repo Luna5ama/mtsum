@@ -1,8 +1,5 @@
 {
   "dependencies": [
-    "llfio",
-    "taskflow",
-    "openssl",
     "argparse"
   ]
 }

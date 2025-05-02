@@ -1,38 +1,26 @@
 #include <argparse/argparse.hpp>
 #include <mpi.h>
-#include "mtsum.hpp"
+
+const int64_t MT_BLOCK_SIZE = 128 * 1024 * 1024;
+const int64_t MT_BLOCK_BALANCE_THRESHOLD = 1024 * 1024 * 1024;
 
 template <class Tp>
 inline void DoNotOptimize(Tp const& value) {
     asm volatile("" : : "r,m"(value) : "memory");
 }
 
-void computeLocalTree(
-    tf::Executor& executor,
-    MTTree& localTree,
-    std::string& filePath,
-    int p,
-    size_t start,
-    size_t end
-) {
-    Scope scope(localTree, filePath, p);
-    tf::Taskflow taskflow("merkel_tree_local");
+size_t floorPot(size_t x) {
+    x = x | (x >> 1);
+    x = x | (x >> 2);
+    x = x | (x >> 4);
+    x = x | (x >> 8);
+    x = x | (x >> 16);
+    x = x | (x >> 32);
+    return x - (x >> 1);
+}
 
-    auto allocTask = taskflow.for_each_index(
-        0, scope.bufferCount, 1, [&scope](int i) {
-            scope.bufferPool.buffers[i].resize(MT_BLOCK_SIZE);
-        }
-    );
-    auto rootTask = taskflow.emplace(
-        [&scope, start, end](tf::Subflow& sbf) {
-            scope.tree.root = std::make_unique<MTNode>(buildTree(sbf, scope, start, end));
-        }
-    );
-    allocTask.name("setup");
-    rootTask.name("root");
-    allocTask.precede(rootTask);
-    executor.run(taskflow).wait();
-    rootTask.name(scope.tree.root->hashString());
+size_t ceilBlockSize(size_t x) {
+    return ((x + MT_BLOCK_SIZE - 1) / MT_BLOCK_SIZE) * MT_BLOCK_SIZE;
 }
 
 void partition(
@@ -53,56 +41,6 @@ void partition(
     auto rightSize = size - leftSize;
     partition(partitions, leftOffset, leftSize, currLevelPartitionCount << 1, targetLevelPartitionCount);
     partition(partitions, rightOffset, rightSize, currLevelPartitionCount << 1, targetLevelPartitionCount);
-}
-
-MTNode globalHash(
-    MTTree& globalTree,
-    std::vector<uint8_t>& localHashes,
-    bool verbose,
-    int index,
-    int currLevelPartitionCount,
-    int targetLevelPartitionCount
-) {
-    if (currLevelPartitionCount == targetLevelPartitionCount) {
-        auto node = MTNode(globalTree);
-        node.hash.resize(globalTree.hashSize);
-        std::copy(
-            localHashes.data() + index * globalTree.hashSize,
-            localHashes.data() + (index + 1) * globalTree.hashSize,
-            node.hash.data()
-        );
-        if (verbose) {
-            std::cout << "Index: " << index << ", Hash: " << node.hashString() << std::endl;
-        }
-        return node;
-    }
-
-    MTNode node(globalTree);
-
-    auto leftIndex = index << 1;
-    auto rightIndex = leftIndex + 1;
-
-    node.left = std::make_unique<MTNode>(
-        globalHash(
-            globalTree,
-            localHashes,
-            verbose,
-            leftIndex,
-            currLevelPartitionCount << 1,
-            targetLevelPartitionCount
-        ));
-    node.right = std::make_unique<MTNode>(
-        globalHash(
-            globalTree,
-            localHashes,
-            verbose,
-            rightIndex,
-            currLevelPartitionCount << 1,
-            targetLevelPartitionCount
-        ));
-    node.hashFromChildren();
-
-    return node;
 }
 
 #pragma clang diagnostic push
@@ -180,18 +118,6 @@ int main(int argc, char* argv[]) {
     }
 
     size_t fileSize = file.tellg();
-
-    if (fileSize / mpiSize < MT_BLOCK_BALANCE_THRESHOLD) {
-        if (mpiRank == 0) std::cerr << "File is too small!" << std::endl;
-        return MPI_Finalize();
-    }
-
-    auto algorithm = EVP_get_digestbyname(algorithmName.c_str());
-
-    if (!algorithm) {
-        if (mpiRank == 0) std::cerr << "Invalid algorithm: " << algorithmName << std::endl;
-        return MPI_Finalize();
-    }
 
     std::vector<std::pair<size_t, size_t>> partitions;
     partition(partitions, 0, fileSize, 1, mpiSize);
