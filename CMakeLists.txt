@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 option(MTSUM_STATIC "Enable static linking" OFF)
+option(MTSUM_VCPKG "Enable vcpkg integration" OFF)
 
 message("MTSUM_STATIC: ${MTSUM_STATIC}")
+message("MTSUM_VCPKG: ${MTSUM_VCPKG}")
+
+if (MTSUM_VCPKG)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+endif ()
 
 if (MTSUM_STATIC)
     set(VCPKG_LIBRARY_LINKAGE static)

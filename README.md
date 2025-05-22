@@ -102,15 +102,17 @@ The following libraries are required to build the project:
 - [LLFIO](https://github.com/ned14/llfio)
 - [OpenSSL](https://github.com/openssl/openssl)
 - [argparse](https://github.com/p-ranav/argparse)
-Note: If you have vcpkg installed with integration (`vcpkg integrate install`). vcpkg will automatically download and install the dependencies for you.
+Note: If you have vcpkg installed. vcpkg will automatically download and install the dependencies for you.
 
 
 ### Building
 #### Dynamic Linking
-1. Run `cmake --preset=release-ninja` or `cmake --preset=release-make` to generate the build files.
+1. Run `cmake --preset release-ninja` or `cmake --preset release-make` to generate the build files.
 2. Run `cd cmake-build-release && make` or `cd cmake-build-release && ninja`  in to build the project.
 #### Static Linking
 Add `-DMTSUM_STATIC=ON` to the `cmake` command to generate build files for static linking.
+#### Using vcpkg
+Add `-DMTSUM_VCPKG=ON` to the `cmake` command to use vcpkg for dependency management.
 
 
 ## Credits
