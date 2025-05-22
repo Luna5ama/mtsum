@@ -111,7 +111,7 @@ MTNode build_tree(tf::Subflow& sbf, Scope& scope, bool isRoot, size_t offset, si
 }
 
 int main(int argc, char* argv[]) {
-    argparse::ArgumentParser program("mtsum", "1.0.2");
+    argparse::ArgumentParser program("mtsum", "1.1.0");
     program.set_usage_max_line_width(200);
 
     program.add_argument("-p")
