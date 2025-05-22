@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 option(MTSUM_STATIC "Enable static linking" OFF)
+
+message("MTSUM_STATIC: ${MTSUM_STATIC}")
+
 if (MTSUM_STATIC)
     set(VCPKG_LIBRARY_LINKAGE static)
     if (WIN32)
         set(VCPKG_TARGET_TRIPLET x64-windows-static)
     endif ()
 endif ()
+
 project(mtsum CXX)
 
 if (MSVC)
@@ -33,5 +37,11 @@ find_package(Threads REQUIRED)
 find_package(Taskflow CONFIG REQUIRED)
 
 add_executable(mtsum src/mtsum.cpp)
-set_property(TARGET mtsum PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+if (MSVC)
+    if (MTSUM_STATIC)
+        set_property(TARGET mtsum PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    else ()
+        set_property(TARGET mtsum PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+    endif ()
+endif()
 target_link_libraries(mtsum PRIVATE argparse::argparse Taskflow::Taskflow llfio::hl OpenSSL::Crypto)

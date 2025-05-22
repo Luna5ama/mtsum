@@ -90,26 +90,27 @@ sys     0m17.137s
 
 ## Building
 ### Prerequisites
-1. CMake 3.20 or higher
-2. [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started)
-3. make or ninja
-4. Any C++ compiler that supports C++20 or higher
+1. CMake 3.20 or higher, but lower than 4.0. CMake 4.0 is currently causing [issue](https://github.com/microsoft/vcpkg/issues/45231#issuecomment-2842035110) with one of the libraries
+2. make or ninja
+3. Any C++ compiler that supports C++20 or higher
+4. (Optional) [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started)
 
 
 ### Dependencies
-Note: vcpkg will automatically download and install the dependencies for you.
+The following libraries are required to build the project:
 - [Taskflow](https://github.com/taskflow/taskflow)
 - [LLFIO](https://github.com/ned14/llfio)
 - [OpenSSL](https://github.com/openssl/openssl)
+- [argparse](https://github.com/p-ranav/argparse)
+Note: If you have vcpkg installed with integration (`vcpkg integrate install`). vcpkg will automatically download and install the dependencies for you.
 
 
-### Instructions
+### Building
 #### Dynamic Linking
 1. Run `cmake --preset=release-ninja` or `cmake --preset=release-make` to generate the build files.
 2. Run `cd cmake-build-release && make` or `cd cmake-build-release && ninja`  in to build the project.
 #### Static Linking
-1. Run `cmake --preset=release-ninja-static` or `cmake --preset=release-make-static` to generate the build files.
-2. Run `cd cmake-build-release-static && make` or `cd cmake-build-release-static && ninja` in to build the project.
+Add `-DMTSUM_STATIC=ON` to the `cmake` command to generate build files for static linking.
 
 
 ## Credits

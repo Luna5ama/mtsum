@@ -7,3 +7,6 @@ cmake-*/
 
 vcpkg_installed/
 build/
+
+/*.log
+CMakeCache.txt
