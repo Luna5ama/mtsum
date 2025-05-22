@@ -31,7 +31,7 @@ size_t previousPowerOfTwo(size_t x) {
     return x - (x >> 1);
 }
 
-void readBytesFromFileLLFIO(const std::string& filePath, size_t readOffset, uint8_t* outputBuffer) {
+void readBytesFromFileLLFIO(const std::string& filePath, size_t readOffset, size_t readLength, uint8_t* outputBuffer) {
     namespace llfio = LLFIO_V2_NAMESPACE;
     try {
         llfio::file_handle fh = llfio::file(
@@ -44,7 +44,7 @@ void readBytesFromFileLLFIO(const std::string& filePath, size_t readOffset, uint
         llfio::read(
             fh,
             readOffset,
-            {{reinterpret_cast<llfio::byte*>(outputBuffer), MT_BLOCK_SIZE}}
+            {{reinterpret_cast<llfio::byte*>(outputBuffer), readLength}}
         );
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
@@ -57,8 +57,17 @@ MTNode computeLeafHash(Scope& scope, size_t offset, size_t size) {
     MTNode node(scope.tree, MTNodeType::LEAF);
     int bufferIndex = scope.bufferPool.alloc();
     auto& buffer = scope.bufferPool.buffers[bufferIndex];
-    readBytesFromFileLLFIO(scope.filePath, offset, buffer.data());
-    node.hashFromData({buffer.data(), size});
+
+    auto start = offset;
+    auto end = offset + size;
+    auto alignedStart = start / MT_BUFFER_ALIGNMENT * MT_BUFFER_ALIGNMENT;
+    auto alignedEnd = (end + MT_BUFFER_ALIGNMENT - 1) / MT_BUFFER_ALIGNMENT * MT_BUFFER_ALIGNMENT;
+    auto alignedSize = alignedEnd - alignedStart;
+    auto prePadding = start - alignedStart;
+
+    readBytesFromFileLLFIO(scope.filePath, alignedStart, alignedSize, buffer.data());
+    node.hashFromData({buffer.data() + prePadding, size});
+
     scope.bufferPool.free(bufferIndex);
     return node;
 }
@@ -84,7 +93,7 @@ tf::Task makeChildNode(tf::Subflow& sbf, Scope& scope, std::unique_ptr<MTNode>& 
 
 MTNode build_tree(tf::Subflow& sbf, Scope& scope, bool isRoot, size_t offset, size_t size) {
     auto leftOffset = offset;
-    auto leftSize = previousPowerOfTwo(size - 1);
+    auto leftSize = size / 2;
     auto rightOffset = offset + leftSize;
     auto rightSize = size - leftSize;
 
