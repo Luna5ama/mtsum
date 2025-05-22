@@ -98,7 +98,7 @@ sys     0m17.137s
 
 ### Dependencies
 The following libraries are required to build the project:
-- [Taskflow](https://github.com/taskflow/taskflow)
+- [Taskflow](https://github.com/taskflow/taskflow) >= 3.9.0
 - [LLFIO](https://github.com/ned14/llfio)
 - [OpenSSL](https://github.com/openssl/openssl)
 - [argparse](https://github.com/p-ranav/argparse)

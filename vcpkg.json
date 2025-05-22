@@ -3,7 +3,10 @@
   "version": "1.1.0",
   "dependencies": [
     "llfio",
-    "taskflow",
+    {
+      "name": "taskflow",
+      "version>=": "3.9.0"
+    },
     "openssl",
     "argparse"
   ]
