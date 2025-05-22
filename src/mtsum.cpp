@@ -106,14 +106,14 @@ int main(int argc, char* argv[]) {
     program.set_usage_max_line_width(200);
 
     program.add_argument("-p")
-        .help("number of processors to use")
         .metavar("processors")
+        .help("number of processors to use")
         .default_value(8)
         .scan<'i', int>();
 
     program.add_argument("-a")
-        .help("hashing algorithm to use, supported algorithms are md5, sha1, sha256, sha384, sha512")
         .metavar("algorithm")
+        .help("hashing algorithm to use, supported algorithms are md5, sha1, sha256, sha384, sha512")
         .default_value(std::string {"sha256"})
         .choices("md5", "sha1", "sha256", "sha384", "sha512");
 
@@ -126,11 +126,11 @@ int main(int argc, char* argv[]) {
         .required();
 
     program.add_group("Misc options");
-    program.add_argument("-b")
+    program.add_argument("--benchmark")
         .help("enable benchmark")
         .flag();
 
-    program.add_argument("-v")
+    program.add_argument("--verbose")
         .help("enable verbose output")
         .flag();
 
@@ -142,12 +142,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    auto filePath = program.get<std::string>("path");
+    auto graphOutput = program.get<bool>("-g");
     auto p = program.get<int>("-p");
     auto algorithmName = program.get<std::string>("-a");
-    auto filePath = program.get<std::string>("path");
-    auto verbose = program.get<bool>("-v");
-    auto benchmark = program.get<bool>("-b");
-    auto graphOutput = program.get<bool>("-g");
+
+    auto benchmark = program.get<bool>("--benchmark");
+    auto verbose = program.get<bool>("--verbose");
 
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
 
