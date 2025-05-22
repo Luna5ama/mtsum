@@ -113,7 +113,8 @@ Note: If you have vcpkg installed. vcpkg will automatically download and install
 Add `-DMTSUM_STATIC=ON` to the `cmake` command to generate build files for static linking.
 #### Using vcpkg
 Add `-DMTSUM_VCPKG=ON` to the `cmake` command to use vcpkg for dependency management.
-
+#### Debug build
+Use preset `debug-ninja` or `debug-make` instead.
 
 ## Credits
 This project is developed under the direction of [Dr. Jaroslaw Zola](http://www.jzola.org/).
