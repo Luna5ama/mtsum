@@ -13,26 +13,34 @@
 struct MTTree;
 struct MTNode;
 
-const int64_t MT_BLOCK_SIZE = 128 * 1024 * 1024;
+constexpr int64_t MT_BLOCK_SIZE = 128 * 1024 * 1024;
 
 struct OpenSSLFree {
-    void operator()(void* ptr) {
-        EVP_MD_CTX_free((EVP_MD_CTX*) ptr);
+    void operator()(void* ptr) const {
+        EVP_MD_CTX_free(static_cast<EVP_MD_CTX*>(ptr));
     }
+};
+
+enum class MTNodeType {
+    LEAF,
+    INTERNAL,
+    ROOT
 };
 
 
 struct MTNode {
     MTTree& tree;
+    MTNodeType nodeType;
     std::vector<uint8_t> hash;
     std::unique_ptr<MTNode> left;
     std::unique_ptr<MTNode> right;
 
-    explicit MTNode(MTTree& tree) : tree(tree) {}
+    MTNode() = delete;
+    explicit MTNode(MTTree& tree, MTNodeType nodeType) : tree(tree), nodeType(nodeType) {}
 
     bool hashFromChildren();
     bool hashFromData(std::span<const uint8_t> inputData);
-    std::string hashString() const;
+    [[nodiscard]] std::string hashString() const;
 };
 
 struct MTTree {
@@ -42,7 +50,7 @@ struct MTTree {
     explicit MTTree(const EVP_MD* hashType) : hashType(hashType), hashSize(EVP_MD_get_size(hashType)) {};
 };
 
-bool MTNode::hashFromData(std::span<const uint8_t> inputData) {
+inline bool MTNode::hashFromData(std::span<const uint8_t> inputData) {
     std::unique_ptr<EVP_MD_CTX, OpenSSLFree> context(EVP_MD_CTX_new());
 
     if (context == nullptr) {
@@ -50,6 +58,12 @@ bool MTNode::hashFromData(std::span<const uint8_t> inputData) {
     }
 
     if (!EVP_DigestInit_ex(context.get(), this->tree.hashType, nullptr)) {
+        return false;
+    }
+
+    // Second preimage attack fix from "Certificate Transparency"
+    uint8_t prependByte = static_cast<uint8_t>(nodeType);
+    if (!EVP_DigestUpdate(context.get(), &prependByte, sizeof(prependByte))) {
         return false;
     }
 
@@ -68,21 +82,21 @@ bool MTNode::hashFromData(std::span<const uint8_t> inputData) {
     return true;
 }
 
-bool MTNode::hashFromChildren() {
+inline bool MTNode::hashFromChildren() {
     std::vector<uint8_t> concatHash(tree.hashSize * 2);
     std::copy(left->hash.begin(), left->hash.end(), concatHash.begin());
     std::copy(right->hash.begin(), right->hash.end(), concatHash.begin() + tree.hashSize);
     return hashFromData(concatHash);
 }
 
-std::stringstream& operator<<(std::stringstream& ss, const MTNode& node) {
+inline std::stringstream& operator<<(std::stringstream& ss, const MTNode& node) {
     for (int i = 0; i < node.tree.hashSize; i++) {
         ss << std::hex << std::setfill('0') << std::setw(2) << (int) node.hash[i];
     }
     return ss;
 }
 
-std::string MTNode::hashString() const {
+inline std::string MTNode::hashString() const {
     std::stringstream ss;
     ss << *this;
     return ss.str();

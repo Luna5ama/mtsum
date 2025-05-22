@@ -51,10 +51,10 @@ void readBytesFromFileLLFIO(const std::string& filePath, size_t readOffset, uint
     }
 }
 
-MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size);
+MTNode build_tree(tf::Subflow& sbf, Scope& scope, bool isRoot, size_t offset, size_t size);
 
 MTNode computeLeafHash(Scope& scope, size_t offset, size_t size) {
-    MTNode node(scope.tree);
+    MTNode node(scope.tree, MTNodeType::LEAF);
     int bufferIndex = scope.bufferPool.alloc();
     auto& buffer = scope.bufferPool.buffers[bufferIndex];
     readBytesFromFileLLFIO(scope.filePath, offset, buffer.data());
@@ -66,7 +66,7 @@ MTNode computeLeafHash(Scope& scope, size_t offset, size_t size) {
 tf::Task makeChildNode(tf::Subflow& sbf, Scope& scope, std::unique_ptr<MTNode>& child, size_t offset, size_t size) {
     if (size <= MT_BLOCK_SIZE) {
         return sbf.emplace(
-                [&scope, &child, offset, size](tf::Subflow& sbf) {
+                [&scope, &child, offset, size] {
                     child = std::make_unique<MTNode>(computeLeafHash(scope, offset, size));
                 }
             )
@@ -76,19 +76,19 @@ tf::Task makeChildNode(tf::Subflow& sbf, Scope& scope, std::unique_ptr<MTNode>& 
     } else {
         return sbf.emplace(
             [&scope, &child, offset, size](tf::Subflow& sbf) {
-                child = std::make_unique<MTNode>(build_tree(sbf, scope, offset, size));
+                child = std::make_unique<MTNode>(build_tree(sbf, scope, false, offset, size));
             }
         ).name(std::to_string(offset) + ", " + std::to_string(size));
     }
 }
 
-MTNode build_tree(tf::Subflow& sbf, Scope& scope, size_t offset, size_t size) {
+MTNode build_tree(tf::Subflow& sbf, Scope& scope, bool isRoot, size_t offset, size_t size) {
     auto leftOffset = offset;
     auto leftSize = previousPowerOfTwo(size - 1);
     auto rightOffset = offset + leftSize;
     auto rightSize = size - leftSize;
 
-    MTNode node(scope.tree);
+    MTNode node(scope.tree, isRoot ? MTNodeType::ROOT : MTNodeType::INTERNAL);
 
     auto leftTask = makeChildNode(sbf, scope, node.left, leftOffset, leftSize);
     auto rightTask = makeChildNode(sbf, scope, node.right, rightOffset, rightSize);
@@ -187,12 +187,12 @@ int main(int argc, char* argv[]) {
 
     auto allocTask = taskflow.for_each_index(
         0, scope.bufferCount, 1, [&scope](int i) {
-            scope.bufferPool.buffers[i].resize(MT_BLOCK_SIZE);
+            scope.bufferPool.buffers[i].resize(MT_BLOCK_SIZE + MT_BUFFER_ALIGNMENT * 2);
         }
     );
     auto rootTask = taskflow.emplace(
         [&scope, fileSize](tf::Subflow& sbf) {
-            scope.tree.root = std::make_unique<MTNode>(build_tree(sbf, scope, 0, fileSize));
+            scope.tree.root = std::make_unique<MTNode>(build_tree(sbf, scope, true, 0, fileSize));
         }
     );
     allocTask.name("setup");
